@@ -2,10 +2,11 @@
 Linear Phase 15-Bands Equalizer
 Key:
    - toggle equalizer control: ctrl+e
-   - prev/next gain control: UP / DOWN
-   - decrease/increase gain: LEFT / RIGHT
+   - prev/next gain control: e / n
+   - decrease/increase gain: h / i
    - copy gain value from prev gain control: [
    - copy gain value from next gain control: ]
+   - also added 'reset' and set to - min, max, zero
 Note that ~~/lua-settings directory should exist to save gain values.
 --]]
 
@@ -13,12 +14,19 @@ local options = require "mp.options"
 local msg = require "mp.msg"
 
 local key_toggle_control = "ctrl+e"
-local key_prev_entry = "UP"
-local key_next_entry = "DOWN"
-local key_decrease = "LEFT"
-local key_increase = "RIGHT"
+local key_prev_entry = "e"
+local key_next_entry = "n"
+local key_decrease = "h"
+local key_increase = "i"
+local key_decrease_big = "H"
+local key_increase_big = "I"
 local key_copy_prev = "["
 local key_copy_next = "]"
+local key_set_to_min = "9"
+local key_set_to_zero = "0"
+local key_set_to_max = "-"
+local key_reset = "r"
+local key_high_cut_preset = "ctrl+h"
 
 local control_enabled = false
 local num_entry = 15
@@ -164,15 +172,8 @@ local function next_entry()
     show_osd_ass()
 end
 
-local function decrease_gain()
-    gain_table[eq(selected_entry)] = math.max(gain_table[eq(selected_entry)]-1, min_val)
-    send_command()
-    show_osd_ass()
-    save_gain_table()
-end
-
-local function increase_gain()
-    gain_table[eq(selected_entry)] = math.min(gain_table[eq(selected_entry)]+1, max_val)
+local function change_gain(value)
+    gain_table[eq(selected_entry)] = math.min(math.max(gain_table[eq(selected_entry)]+value, min_val), max_val)
     send_command()
     show_osd_ass()
     save_gain_table()
@@ -192,6 +193,48 @@ local function copy_next()
     save_gain_table()
 end
 
+local function set_to_min()
+    gain_table[eq(selected_entry)] = min_val
+    send_command()
+    show_osd_ass()
+    save_gain_table()
+end
+
+local function set_to_max()
+    gain_table[eq(selected_entry)] = max_val
+    send_command()
+    show_osd_ass()
+    save_gain_table()
+end
+
+local function set_to_zero()
+    gain_table[eq(selected_entry)] = 0
+    send_command()
+    show_osd_ass()
+    save_gain_table()
+end
+
+local function reset()
+    for x = 0, num_entry-1 do
+        gain_table[eq(x)] = 0
+    end
+    send_command()
+    show_osd_ass()
+    save_gain_table()
+end
+
+local function high_cut_preset()
+    gain_table[eq(14)] = min_val
+    gain_table[eq(13)] = min_val
+    gain_table[eq(12)] = -240
+    gain_table[eq(11)] = -180
+    gain_table[eq(10)] = -120
+    gain_table[eq(9)] = -60
+    send_command()
+    show_osd_ass()
+    save_gain_table()
+end
+
 local function binding_name(name)
     return mp.get_script_name() .. "-" .. name
 end
@@ -202,18 +245,32 @@ local function toggle_control()
         show_osd_ass()
         mp.add_forced_key_binding(key_prev_entry, binding_name("prev"), prev_entry, {repeatable=true})
         mp.add_forced_key_binding(key_next_entry, binding_name("next"), next_entry, {repeatable=true})
-        mp.add_forced_key_binding(key_decrease, binding_name("decrease"), decrease_gain, {repeatable=true})
-        mp.add_forced_key_binding(key_increase, binding_name("increase"), increase_gain, {repeatable=true})
+        mp.add_forced_key_binding(key_decrease, binding_name("decrease"), function() change_gain(-10); end, {repeatable=true})
+        mp.add_forced_key_binding(key_increase, binding_name("increase"), function() change_gain(10); end, {repeatable=true})
+        mp.add_forced_key_binding(key_decrease_big, binding_name("decrease_big"), function() change_gain(-60); end, {repeatable=true})
+        mp.add_forced_key_binding(key_increase_big, binding_name("increase_big"), function() change_gain(60); end, {repeatable=true})
         mp.add_forced_key_binding(key_copy_prev, binding_name("copy_prev"), copy_prev)
         mp.add_forced_key_binding(key_copy_next, binding_name("copy_next"), copy_next)
+        mp.add_forced_key_binding(key_set_to_min, binding_name("set_to_min"), set_to_min)
+        mp.add_forced_key_binding(key_set_to_max, binding_name("set_to_max"), set_to_max)
+        mp.add_forced_key_binding(key_set_to_zero, binding_name("set_to_zero"), set_to_zero)
+        mp.add_forced_key_binding(key_reset, binding_name("reset"), reset)
+        mp.add_forced_key_binding(key_high_cut_preset, binding_name("high_cut_preset"), high_cut_preset)
     else
         hide_osd_ass()
         mp.remove_key_binding(binding_name("prev"))
         mp.remove_key_binding(binding_name("next"))
         mp.remove_key_binding(binding_name("decrease"))
         mp.remove_key_binding(binding_name("increase"))
+        mp.remove_key_binding(binding_name("decrease_big"))
+        mp.remove_key_binding(binding_name("increase_big"))
         mp.remove_key_binding(binding_name("copy_prev"))
         mp.remove_key_binding(binding_name("copy_next"))
+        mp.remove_key_binding(binding_name("set_to_min"))
+        mp.remove_key_binding(binding_name("set_to_max"))
+        mp.remove_key_binding(binding_name("set_to_zero"))
+        mp.remove_key_binding(binding_name("reset"))
+        mp.remove_key_binding(binding_name("high_cut_preset"))
     end
 end
 
